@@ -1,10 +1,22 @@
-# -----------------------------------------------------------------------------
-#  Confidential and Proprietary
-#  Copyright (C) 2025 Eyal Hochberg. All rights reserved.
+# ----------------------------------------------------------------------------
+#  Copyright (C) 2025 Eyal Hochberg (eyalhoc@gmail.com)
 #
-#  Unauthorized use, copying, distribution, or modification,
-#  in whole or in part, is strictly prohibited without prior written consent.
+#  This file is part of an open-source Python-to-Verilog synthesizable converter.
+#
+#  Licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later).
+#  You may use, modify, and distribute this software in accordance with the GPL-3.0 terms.
+#
+#  This software is distributed WITHOUT ANY WARRANTY; without even the implied
+#  warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#  GPL-3.0 license for full details: https://www.gnu.org/licenses/gpl-3.0.html
 # -----------------------------------------------------------------------------
+# 
+# This is a reduced version of the P2V-MEM IP.
+# For the complete feature set see attached documentation.
+# For license inquiries contact Eyal Hochberg: eyalhoc@gmail.com
+# 
+# -----------------------------------------------------------------------------
+
 
 """
 g_mem_top module
