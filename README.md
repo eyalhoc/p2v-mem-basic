@@ -1,27 +1,39 @@
-## 🧠 P2V-MEM IP – Basic Tier
+## 🧠 P2V-MEM IP – Basic Tier  
+_Reduced feature set for open source version_
 
-### ✅ Features
-- Simplified specification of total virtual memory dimensions
-- Automatic calculation of row and bank counts
-- Supports flip-flop (FF) or library SRAM implementations
-- Single or dual memory ports, each configurable as:
-  - Read-only
-  - Write-only
-  - Read/Write
-- Independent or shared clocking per port
-- Bit-select and byte-select capabilities
-- Attribute extraction from library SRAM
-- Optional output sampling
-- Built-in testbench tasks:
-  - `read`
-  - `write`
+### ✅ Supported Features
+- Intuitive specification of total virtual memory dimensions  
+- Automatic calculation of memory rows and banks  
+- Supports both flip-flop (FF) and library SRAM implementations  
+- Flexible memory port configuration:  
+  - Single or dual ports  
+  - Each port independently configurable as:  
+    - Read-only  
+    - Write-only  
+    - Read/Write  
+- Clocking options: independent or shared per port  
+- Bit-select and byte-select support  
+- Attribute extraction from target library SRAM  
+- Optional output sampling for post-processing  
+- Built-in testbench tasks for quick verification:  
+  - `read`  
+  - `write`  
   - `load file`
 
+---
+
 ### ❌ Unsupported Features  
-_Contact [Eyal Hochberg](mailto:eyalhoc@gmail.com) for inquiries_
-- Tiling heterogeneous SRAM blocks for exact capacity alignment
-- Hamming code (ECC): 2-bit error detection, 1-bit correction
-- Input/output sampling on ECC decoder path
-- ECC byte access via read-modify-write cycles
-- AXI bus interface support
-- Multiple concurrent interfaces for independent memory regions (multi-row access)
+_For enhanced capabilities, contact [Eyal Hochberg](mailto:eyalhoc@gmail.com)_  
+- Tiling of heterogeneous SRAM blocks to match capacity constraints  
+- Error-correcting code (ECC): 2-bit detection, 1-bit correction  
+- ECC decoder path input/output sampling  
+- Read-modify-write ECC byte access  
+- AXI protocol interface  
+- Concurrent multi-interface access for separate memory regions  
+
+---
+
+### ▶️ Quick Start
+To build and test:  
+```bash
+bash build_basic.sh
