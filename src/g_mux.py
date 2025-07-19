@@ -22,7 +22,7 @@
 g_mux module
 """
 
-from p2v import p2v, misc, clock, default_clk, ENUM_NAME, ENUM_BITS, ENUM_DEFAULT
+from p2v import p2v, misc, clock, default_clk, p2v_enum
 
 class g_mux(p2v):
     """
@@ -39,23 +39,21 @@ class g_mux(p2v):
         """
 
         _input_names = []
-        if isinstance(num, dict):
-            self._assert(ENUM_NAME in num and ENUM_BITS in num, f"{num} is of type dict but it is not a p2v enum", fatal=True)
-            _enum_name = num[ENUM_NAME]
-            for _name in num:
-                if not _name.startswith("__"):
+        if isinstance(num, p2v_enum):
+            _enum_name = num.NAME
+            for _name in vars(num):
+                if not _name.startswith("__") and _name not in ["NAME", "BITS"]:
                     _input_names.append(_name)
             if not misc.is_pow2(len(_input_names)):
-                _input_names.append(ENUM_DEFAULT)
+                _input_names.append("DEFAULT")
             num = len(_input_names)
         else:
             _enum_name = ""
             for _n in range(num):
                 _input_names.append(f"in{_n}")
 
-        if isinstance(bits, dict):
-            self._assert(ENUM_NAME in bits and ENUM_BITS in bits, f"{bits} is of type dict but it is not a p2v enum", fatal=True)
-            bits = bits[ENUM_BITS]
+        if isinstance(bits, p2v_enum):
+            bits = bits.BITS
 
 
         self.set_param(clk, clock) # optional clock

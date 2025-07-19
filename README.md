@@ -34,6 +34,6 @@ _For enhanced capabilities, contact [Eyal Hochberg](mailto:eyalhoc@gmail.com)_
 ---
 
 ### ▶️ Quick Start
-To build and test:  
+To build exmaple:  
 ```bash
 bash build_basic.sh

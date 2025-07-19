@@ -119,7 +119,7 @@ class g_sram(p2v):
                         self.assign(f"wsel{n}", misc.bits(f"wr{n}_sel", bits))
                     else:
                         for i in range(bits // bit_sel):
-                            self.assign(misc.bit(f"wsel{n}", i), "|" + misc.bits(f"wr{n}_sel", bit_sel, bit_sel*i))
+                            self.assign(misc.bit(f"wsel{n}", i), f'|{misc.bits(f"wr{n}_sel", bit_sel, bit_sel*i)}')
 
             son = self.verilog_module(sram_name)
             for n in range(MAX_PORTS):
@@ -144,9 +144,9 @@ class g_sram(p2v):
             # connect unused signals
             for name, signal in signals.items():
                 if name not in son._pins:
-                    if signal.kind == "input":
+                    if signal._kind == "input":
                         son.connect_in(name, misc.dec(0, signal.bits))
-                    elif signal.kind == "output":
+                    elif signal._kind == "output":
                         son.connect_out(name, None)
 
             son.inst("sram")
@@ -279,13 +279,13 @@ class g_sram(p2v):
         signals = self._get_verilog_ports(sram_name)
         names = self._get_lib_conn(signals, names=True)
 
-        params["bits"] = signals[names["din0"]].bits
-        params["addr_bits"] = signals[names["addr0"]].bits
+        params["bits"] = signals[names["din0"]]._bits
+        params["addr_bits"] = signals[names["addr0"]]._bits
         params["line_num"] = 1 << params["addr_bits"]
         port_names = list(signals.keys())
         params["dual_clk"] = names["clk1"] in port_names
         if names["wsel0"] in port_names:
-            params["bit_sel"] = params["bits"] // signals[names["wsel0"]].bits
+            params["bit_sel"] = params["bits"] // signals[names["wsel0"]]._bits
         else:
             params["bit_sel"] = 0
 
