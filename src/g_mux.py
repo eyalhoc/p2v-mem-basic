@@ -32,7 +32,7 @@ class g_mux(p2v):
         * encoded / decoded selector
         * optional sampling of output
     """
-    def module(self, clk=default_clk, num=8, bits=32, encode=True, sample=False, valid=False):
+    def module(self, clk=default_clk, num=8, bits=32, encode=True, sample=False, has_valid=False):
         # pylint: disable=too-many-branches
         """
         Main function
@@ -61,7 +61,7 @@ class g_mux(p2v):
         self.set_param(bits, int, bits > 0) # data width
         self.set_param(encode, bool, default=True) # encoded selector or hot-one decoded selector
         self.set_param(sample, bool, default=False) # sample output
-        self.set_param(valid, bool, default=False) # sample valid signal
+        self.set_param(has_valid, bool, default=False) # sample has_valid signal
         self.set_modname()
 
 
@@ -72,40 +72,37 @@ class g_mux(p2v):
 
         if sample:
             self.input(clk)
-        if valid:
-            self.input("valid")
-            self.output("valid_out")
+        if has_valid:
+            valid = self.input()
+            valid_out = self.output()
+        else:
+            valid = None
 
-        self.input("sel", [sel_bits])
+        sel = self.input([sel_bits])
         for name in _input_names:
             self.input(name, [bits])
-        self.output("out", [bits])
+        out = self.output([bits])
 
 
-        self.logic("decoded_sel", [num])
+        decoded_sel = self.logic([num])
         if encode:
             for n in range(num):
-                self.assign(misc.bit("decoded_sel", n), f"sel == {misc.dec(n, sel_bits)}")
+                self.assign(misc.bit(decoded_sel, n), sel == misc.dec(n, sel_bits))
         else:
-            self.assign("decoded_sel", "sel")
+            self.assign(decoded_sel, sel)
 
         sel_lines = []
         for n in range(num):
-            sel_bus = misc.concat(bits * [misc.bit("decoded_sel", n)])
-            sel_lines.append(f"({sel_bus} & {_input_names[n]})")
+            sel_bus = misc.concat(bits * [misc.bit(decoded_sel, n)])
+            sel_lines.append(f"{sel_bus} & {_input_names[n]}")
         mux_lines = " |\n ".join(sel_lines)
 
-        if sample:
-            self.sample(clk, "out", mux_lines, valid=misc.cond(valid, "valid", None))
-            if valid:
-                self.sample(clk, "valid_out", "valid")
-        else:
-            self.assign("out", mux_lines)
-            if valid:
-                self.assign("valid_out", "valid")
+        self.sample(clk, out, mux_lines, valid=valid, bypass=not sample)
+        if has_valid:
+            self.sample(clk, valid_out, valid, bypass=not sample)
 
         if not encode:
-            self.assert_always("sel", misc.is_hotone("sel", sel_bits, allow_zero=True), "mux decoded selector must be hotone")
+            self.assert_always(sel, misc.is_hotone(sel, sel_bits, allow_zero=True), "mux decoded selector must be hotone")
 
         return self.write()
 
@@ -124,6 +121,6 @@ class g_mux(p2v):
         args["bits"] = self.tb.rand_int(1, 1024)
         args["encode"] = self.tb.rand_bool()
         args["sample"] = self.tb.rand_bool()
-        args["valid"] = self.tb.rand_bool()
+        args["has_valid"] = self.tb.rand_bool()
         return args
 

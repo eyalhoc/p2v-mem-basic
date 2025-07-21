@@ -240,7 +240,7 @@ class g_mem(p2v):
             self.sample(clks[idx], f"rd{idx}_valid_pre", f"rd{idx}")
 
             # READ DATA MUX
-            son = g_mux.g_mux(self).module(clks[idx], num=row_num, bits=bits_roundup, encode=False, sample=sample_out, valid=True)
+            son = g_mux.g_mux(self).module(clks[idx], num=row_num, bits=bits_roundup, encode=False, sample=sample_out, has_valid=True)
             if sample_out:
                 son.connect_in(clks[idx])
             son.connect_in("valid", f"rd{idx}_valid_pre")

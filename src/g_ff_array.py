@@ -56,16 +56,16 @@ class g_ff_array(p2v):
         if wr_clk != rd_clk:
             self.input(rd_clk)
 
-        self.input("wr")
-        self.input("wr_addr", [addr_bits])
-        self.input("wr_data", [bits])
+        wr = self.input()
+        wr_addr = self.input([addr_bits])
+        wr_data = self.input([bits])
         if bit_sel == 1:
-            self.input("wr_sel", [bits])
+            wr_sel = self.input([bits])
         else:
-            self.logic("wr_sel", [bits], assign=-1)
-        self.input("rd")
-        self.input("rd_addr", [addr_bits])
-        self.output("rd_data", [bits])
+            wr_sel = self.logic([bits], assign=-1)
+        rd = self.input()
+        rd_addr = self.input([addr_bits])
+        rd_data = self.output([bits])
 
 
         if "." in path:
@@ -81,13 +81,13 @@ class g_ff_array(p2v):
         else:
             self.logic(path, (depth, bits)) # multi-dimentional array
 
-            self.sample(wr_clk, misc.bit(path, "wr_addr"), f"(wr_sel & wr_data) | (~wr_sel & {misc.bit(path, 'wr_addr')})", valid="wr")
+            self.sample(wr_clk, misc.bit(path, wr_addr), (wr_sel & wr_data) | (~wr_sel & misc.bit(path, wr_addr)), valid=wr)
 
             if sample:
-                self.sample(rd_clk, "rd_data", misc.bit(path, "rd_addr"), valid="rd")
+                self.sample(rd_clk, rd_data, misc.bit(path, rd_addr), valid=rd)
             else:
-                self.assign("rd_data", misc.bit(path, "rd_addr"))
-                self.allow_unused([rd_clk, "rd"])
+                self.assign(rd_data, misc.bit(path, rd_addr))
+                self.allow_unused([rd_clk, rd])
 
             self._rw_tasks(path=path, bits=bits, addr_bits=addr_bits)
 
