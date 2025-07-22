@@ -73,63 +73,76 @@ class g_sram(p2v):
             self.remark(f"sram port {n}: {_sram_params[f'port{n}']}")
         self.line()
 
+        wr       = [None] * MAX_PORTS
+        wr_addr  = [None] * MAX_PORTS
+        wr_data  = [None] * MAX_PORTS
+        wr_sel   = [None] * MAX_PORTS
+        rd       = [None] * MAX_PORTS
+        rd_addr  = [None] * MAX_PORTS
+        rd_data  = [None] * MAX_PORTS
+        rd_valid = [None] * MAX_PORTS
+        
+        port_idxs = []
         for n in range(MAX_PORTS):
             port = _sram_params[f"port{n}"]
             if port != "":
-                if clks[n] is not None and clks[n].name not in self._signals:
+                port_idxs.append(n)
+                if clks[n] is not None and (n==0 or clks[n] != clks[n-1]):
                     self.input(clks[n])
-                self.input(f"wr{n}")
-                self.input(f"wr{n}_addr", [addr_bits+pad_addr_bits])
-                self.input(f"wr{n}_data", [bits+pad_bits])
-                self.input(f"wr{n}_sel", [bits+pad_bits])
+                wr[n]      = self.input(f"wr{n}")
+                wr_addr[n] = self.input(f"wr{n}_addr", [addr_bits+pad_addr_bits])
+                wr_data[n] = self.input(f"wr{n}_data", [bits+pad_bits])
+                wr_sel[n]  = self.input(f"wr{n}_sel", [bits+pad_bits])
                 if bit_sel == 0:
-                    self.allow_unused(f"wr{n}_sel")
-                self.input(f"rd{n}")
-                self.input(f"rd{n}_addr", [addr_bits+pad_addr_bits])
-                self.output(f"rd{n}_data", [bits+pad_bits])
-                self.output(f"rd{n}_valid")
-
+                    self.allow_unused(wr_sel[n])
+                rd[n]       = self.input(f"rd{n}")
+                rd_addr[n]  = self.input(f"rd{n}_addr", [addr_bits+pad_addr_bits])
+                rd_data[n]  = self.output(f"rd{n}_data", [bits+pad_bits])
+                rd_valid[n] = self.output(f"rd{n}_valid")
+                
 
         if sram_name is None:
             son = g_ff_array.g_ff_array(self).module(wr_clk=clks[0], rd_clk=clks[1], depth=line_num, bits=bits, sample=True)
             son.connect_in(clks[0])
             if clks[0] != clks[1]:
                 son.connect_in(clks[1])
-            son.connect_in("wr", "wr0")
-            son.connect_in("wr_addr", "wr0_addr")
-            son.connect_in("wr_data", "wr0_data")
-            son.connect_in("wr_sel", "wr0_sel")
-            son.connect_in("rd", "rd1")
-            son.connect_in("rd_addr", "rd1_addr")
-            son.connect_out("rd_data", "rd1_data")
+            son.connect_in(son.wr, wr[0])
+            son.connect_in(son.wr_addr, wr_addr[0])
+            son.connect_in(son.wr_data, wr_data[0])
+            son.connect_in(son.wr_sel, wr_sel[0])
+            son.connect_in(son.rd, rd[1])
+            son.connect_in(son.rd_addr, rd_addr[1])
+            son.connect_out(son.rd_data, rd_data[1])
             son.inst("sram")
             path = "sram.mem"
 
-        else:
-            signals = self._get_verilog_ports(sram_name)
-            names = self._get_lib_conn(signals, names=True)
-            conn = self._get_lib_conn(signals, names=False)
 
+        else:
             # create write select
+            wsel = [None] * MAX_PORTS
             for n in range(MAX_PORTS):
                 port = _sram_params[f"port{n}"]
                 if "w" in port and bit_sel > 0:
-                    self.logic(f"wsel{n}", bits // bit_sel)
+                    wsel[n] = self.logic(f"wsel{n}", bits // bit_sel)
                     if bit_sel == 1:
-                        self.assign(f"wsel{n}", misc.bits(f"wr{n}_sel", bits))
+                        self.assign(wsel[n], misc.bits(wr_sel[n], bits))
                     else:
                         for i in range(bits // bit_sel):
-                            self.assign(misc.bit(f"wsel{n}", i), f'|{misc.bits(f"wr{n}_sel", bit_sel, bit_sel*i)}')
+                            self.assign(misc.bit(wsel[n], i), misc.bits(wr_sel[n], bit_sel, bit_sel*i) > 0)
+    
+            signals = self._get_verilog_ports(sram_name)
+            names = self._get_lib_names(signals)
+            conn = self._get_lib_conn(signals, wr, wr_addr, wr_data, wsel, rd, rd_addr, rd_data)
 
+            addr = [None] * MAX_PORTS
             son = self.verilog_module(sram_name)
-            for n in range(MAX_PORTS):
-                port = _sram_params[f"port{n}"]
-                if port != "":
-                    self.logic(f"addr{n}", [addr_bits+pad_addr_bits], assign=conn[f"addr{n}"])
-                    son.connect_in(names[f"clk{n}"], clks[n].name)
-                    son.connect_in(names[f"addr{n}"], misc.bits(f"addr{n}", addr_bits))
-                    if self._check_port(sram_name, f"csb{n}"):
-                        son.connect_in(names[f"csb{n}"], conn[f"csb{n}"])
+            for n in port_idxs:
+                addr[n] = self.logic(f"addr{n}", [addr_bits+pad_addr_bits])
+                self.assign(addr[n], conn[f"addr{n}"])
+                son.connect_in(names[f"clk{n}"], clks[n].name)
+                son.connect_in(names[f"addr{n}"], misc.bits(addr[n], addr_bits))
+                if self._check_port(sram_name, f"csb{n}"):
+                    son.connect_in(names[f"csb{n}"], conn[f"csb{n}"])
                 if self._check_port(sram_name, f"web{n}"):
                     son.connect_in(names[f"web{n}"], conn[f"web{n}"])
                 if self._check_port(sram_name, f"din{n}"):
@@ -137,15 +150,15 @@ class g_sram(p2v):
                 if self._check_port(sram_name, f"wsel{n}"):
                     son.connect_in(names[f"wsel{n}"], conn[f"wsel{n}"])
                 if self._check_port(sram_name, f"dout{n}"):
-                    son.connect_out(names[f"dout{n}"], misc.bits(f"rd{n}_data", bits))
+                    son.connect_out(names[f"dout{n}"], misc.bits(rd_data[n], bits))
                     if pad_bits > 0:
-                        self.assign(misc.bits(f"rd{n}_data", pad_bits, start=bits), misc.dec(0, pad_bits))
+                        self.assign(misc.bits(rd_data[n], pad_bits, start=bits), misc.dec(0, pad_bits))
 
             # connect unused signals
             for name, signal in signals.items():
                 if name not in son._pins:
                     if signal._kind == "input":
-                        son.connect_in(name, misc.dec(0, signal.bits))
+                        son.connect_in(name, 0)
                     elif signal._kind == "output":
                         son.connect_out(name, None)
 
@@ -153,25 +166,22 @@ class g_sram(p2v):
             path = f"sram.{names['mem']}"
 
 
-        for n in range(MAX_PORTS):
-            self.allow_unused(clks) # resets might not be used
+        for n in port_idxs:
             port = _sram_params[f"port{n}"]
-            if port == "":
-                continue
             if "w" not in port:
-                self.allow_unused(f"wr{n}")
-                self.allow_unused(f"wr{n}_addr")
-                self.allow_unused(f"wr{n}_data")
-                self.allow_unused(f"wr{n}_sel")
-                self.assert_never(clks[n], f"wr{n}", f"write detected on read only port {n}")
+                self.allow_unused(wr[n])
+                self.allow_unused(wr_addr[n])
+                self.allow_unused(wr_data[n])
+                self.allow_unused(wr_sel[n])
+                self.assert_never(clks[n], wr[n], f"write detected on read only port {n}")
             if "r" in port:
-                self.sample(clks[n], f"rd{n}_valid", f"rd{n}")
+                self.sample(clks[n], rd_valid[n], rd[n])
             else:
-                self.allow_unused(f"rd{n}")
-                self.allow_unused(f"rd{n}_addr")
-                self.assert_never(clks[n], f"rd{n}", f"read detected on write only port {n}")
-                self.assign(f"rd{n}_data", 0)
-                self.assign(f"rd{n}_valid", 0)
+                self.allow_unused(rd[n])
+                self.allow_unused(rd_addr[n])
+                self.assert_never(clks[n], rd[n], f"read detected on write only port {n}")
+                self.assign(rd_data[n], 0)
+                self.assign(rd_valid[n], 0)
 
 
         self.tb.syn_off()
@@ -198,48 +208,106 @@ class g_sram(p2v):
         return self.write()
 
 
-    def _get_lib_conn(self, signals, names=True):
+    def _get_lib_names(self, signals):
+        names = {}
+
+        # openram
+        if "din0" in signals and "addr0" in signals:
+            names["mem"] = "mem"
+            for n in range(MAX_PORTS):
+                names[f"clk{n}"]  = f"clk{n}"
+                names[f"csb{n}"]  = f"csb{n}"
+                names[f"web{n}"]  = f"web{n}"
+                names[f"din{n}"]  = f"din{n}"
+                names[f"addr{n}"] = f"addr{n}"
+                names[f"wsel{n}"] = f"wmask{n}"
+                names[f"dout{n}"] = f"dout{n}"
+
+        # tsmc
+        elif "D" in signals and "Q" in signals:
+            names["mem"] = "u_ram_core.memory"
+            if "AA" in signals and "CLKW" in signals: # one write port and one read port
+                names["clk0"]  = "CLKW"
+                names["csb0"]  = None
+                names["web0"]  = "WEB"
+                names["addr0"] = "AA"
+                names["din0"]  = "D"
+                names["wsel0"] = "BWEB"
+                names["dout0"] = None
+
+                names["clk1"]  = "CLKR"
+                names["csb1"]  = None
+                names["web1"]  = "REB"
+                names["addr1"] = "AB"
+                names["din1"]  = None
+                names["wsel1"] = None
+                names["dout1"] = "Q"
+            else: # one port for read and write
+                names["clk0"]  = "CLK"
+                names["csb0"]  = "CEB"
+                names["web0"]  = "WEB"
+                names["addr0"] = "A"
+                names["din0"]  = "D"
+                names["wsel0"] = "BWEB"
+                names["dout0"] = "Q"
+
+                names["clk1"]  = None
+                names["csb1"]  = None
+                names["web1"]  = None
+                names["addr1"] = None
+                names["din1"] = None
+                names["wsel1"] = None
+                names["dout1"] = None
+
+        else:
+            self._raise("failed to find sram port connectivity")
+
+        return names
+
+    def _get_lib_conn(self, signals, wr, wr_addr, wr_data, wsel, rd, rd_addr, rd_data):
         conn = {}
 
         # openram
         if "din0" in signals and "addr0" in signals:
             conn["mem"] = "mem"
             for n in range(MAX_PORTS):
-                conn[f"clk{n}"]  = misc.cond(names, f"clk{n}", None)
-                conn[f"csb{n}"]  = misc.cond(names, f"csb{n}", f"~(wr{n} | rd{n})")
-                conn[f"web{n}"]  = misc.cond(names, f"web{n}", f"rd{n}")
-                conn[f"din{n}"]  = misc.cond(names, f"din{n}", f"wr{n}_data")
-                conn[f"addr{n}"] = misc.cond(names, f"addr{n}", f"wr{n} ? wr{n}_addr : rd{n}_addr")
-                conn[f"wsel{n}"] = misc.cond(names, f"wmask{n}", f"wsel{n}")
-                conn[f"dout{n}"] = misc.cond(names, f"dout{n}", None)
+                if wr[n] is None:
+                    continue
+                conn[f"clk{n}"]  = None
+                conn[f"csb{n}"]  = ~(wr[n] | rd[n])
+                conn[f"web{n}"]  = rd[n]
+                conn[f"din{n}"]  = wr_data[n]
+                conn[f"addr{n}"] = misc.cond(wr[n], wr_addr[n], rd_addr[n])
+                conn[f"wsel{n}"] = wsel[n]
+                conn[f"dout{n}"] = None
 
         # tsmc
         elif "D" in signals and "Q" in signals:
             conn["mem"] = "u_ram_core.memory"
             if "AA" in signals and "CLKW" in signals: # one write port and one read port
-                conn["clk0"]  = misc.cond(names, "CLKW", None)
+                conn["clk0"]  = None
                 conn["csb0"]  = None
-                conn["web0"]  = misc.cond(names, "WEB", "~wr0")
-                conn["addr0"] = misc.cond(names, "AA", "wr0_addr")
-                conn["din0"]  = misc.cond(names, "D", "wr0_data")
-                conn["wsel0"] = misc.cond(names, "BWEB", "~wsel0")
+                conn["web0"]  = wr[0]
+                conn["addr0"] = wr_addr[0]
+                conn["din0"]  = wr_data[0]
+                conn["wsel0"] = wsel[0]
                 conn["dout0"] = None
 
-                conn["clk1"]  = misc.cond(names, "CLKR", None)
+                conn["clk1"]  = None
                 conn["csb1"]  = None
-                conn["web1"]  = misc.cond(names, "REB", "~rd1")
-                conn["addr1"] = misc.cond(names, "AB", "rd1_addr")
+                conn["web1"]  = rd[1]
+                conn["addr1"] = rd_addr[1]
                 conn["din1"]  = None
                 conn["wsel1"] = None
-                conn["dout1"] = misc.cond(names, "Q", None)
+                conn["dout1"] = None
             else: # one port for read and write
-                conn["clk0"]  = misc.cond(names, "CLK", None)
-                conn["csb0"]  = misc.cond(names, "CEB", "~(wr0 | rd0)")
-                conn["web0"]  = misc.cond(names, "WEB", "rd0")
-                conn["addr0"] = misc.cond(names, "A", "wr0 ? wr0_addr : rd0_addr")
-                conn["din0"]  = misc.cond(names, "D", "wr0_data")
-                conn["wsel0"] = misc.cond(names, "BWEB", "~wsel0")
-                conn["dout0"] = misc.cond(names, "Q", "rd0_data")
+                conn["clk0"]  = None
+                conn["csb0"]  = ~(wr[0] | rd[0])
+                conn["web0"]  = rd[0]
+                conn["addr0"] = misc.cond(wr[0], wr_addr[0], rd_addr[0])
+                conn["din0"]  = wr_data[0]
+                conn["wsel0"] = ~wsel[0]
+                conn["dout0"] = rd_data[0]
 
                 conn["clk1"]  = None
                 conn["csb1"]  = None
@@ -253,10 +321,10 @@ class g_sram(p2v):
             self._raise("failed to find sram port connectivity")
 
         return conn
-
+        
     def _check_port(self, sram_name, name):
         signals = self._get_verilog_ports(sram_name)
-        names = self._get_lib_conn(signals, names=True)
+        names = self._get_lib_names(signals)
         port_names = list(signals.keys())
         return names[name] is not None and names[name] in port_names
 
@@ -277,7 +345,7 @@ class g_sram(p2v):
         self._assert_type(sram_name, str)
         self.assert_static(self._find_module(sram_name) is not None, f"could not find sram {sram_name}")
         signals = self._get_verilog_ports(sram_name)
-        names = self._get_lib_conn(signals, names=True)
+        names = self._get_lib_names(signals)
 
         params["bits"] = signals[names["din0"]]._bits
         params["addr_bits"] = signals[names["addr0"]]._bits

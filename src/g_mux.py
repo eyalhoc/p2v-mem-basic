@@ -79,8 +79,7 @@ class g_mux(p2v):
             valid = None
 
         sel = self.input([sel_bits])
-        for name in _input_names:
-            self.input(name, [bits])
+        self.input(_input_names, [bits])
         out = self.output([bits])
 
 

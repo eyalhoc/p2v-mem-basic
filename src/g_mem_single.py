@@ -75,16 +75,23 @@ class g_mem_single(p2v):
         if clk1 != clk0:
             self.input(clk1)
 
+        wr       = []
+        wr_addr  = []
+        wr_data  = []
+        wr_sel   = []
+        rd       = []
+        rd_addr  = []
+        rd_data  = []
+        rd_valid = []
         for idx in range(port_num):
-            self.input(f"wr{idx}")
-            self.input(f"wr{idx}_addr", [addr_bits])
-            self.input(f"wr{idx}_data", [bits])
-            self.input(f"wr{idx}_sel", [bits])
-            self.input(f"rd{idx}")
-            self.input(f"rd{idx}_addr", [addr_bits])
-            self.output(f"rd{idx}_data", [bits])
-            self.output(f"rd{idx}_valid")
-
+            wr       += [self.input(f"wr{idx}")]
+            wr_addr  += [self.input(f"wr{idx}_addr", [addr_bits])]
+            wr_data  += [self.input(f"wr{idx}_data", [bits])]
+            wr_sel   += [self.input(f"wr{idx}_sel", [bits])]
+            rd       += [self.input(f"rd{idx}")]
+            rd_addr  += [self.input(f"rd{idx}_addr", [addr_bits])]
+            rd_data  += [self.output(f"rd{idx}_data", [bits])]
+            rd_valid += [self.output(f"rd{idx}_valid")]
 
         bank_num = row_num = 1
         multi_bits = bits
@@ -98,14 +105,14 @@ class g_mem_single(p2v):
             if clk1 != clk0:
                 son.connect_in(clk1)
             for idx in range(port_num):
-                son.connect_in(f"wr{idx}")
-                son.connect_in(f"wr{idx}_addr")
-                son.connect_in(f"wr{idx}_data")
-                son.connect_in(f"wr{idx}_sel")
-                son.connect_in(f"rd{idx}")
-                son.connect_in(f"rd{idx}_addr")
-                son.connect_out(f"rd{idx}_data")
-                son.connect_out(f"rd{idx}_valid")
+                son.connect_in(wr[idx])
+                son.connect_in(wr_addr[idx])
+                son.connect_in(wr_data[idx])
+                son.connect_in(wr_sel[idx])
+                son.connect_in(rd[idx])
+                son.connect_in(rd_addr[idx])
+                son.connect_out(rd_data[idx])
+                son.connect_out(rd_valid[idx])
             son.inst("sram")
 
 
