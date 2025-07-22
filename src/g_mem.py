@@ -267,7 +267,7 @@ class g_mem(p2v):
             son.connect_in(son.valid, rd_valid_pre[idx])
             son.connect_in(son.sel, rd_select[idx])
             for y in range(row_num):
-                son.connect_in(f"in{y}", rd_row_data[idx][y]) # TBD son.in[y]
+                son.connect_in(son.din[y], rd_row_data[idx][y])
             son.connect_out(son.out, rd_data_pad[idx])
             son.connect_out(son.valid_out, rd_valid[idx])
             son.inst(suffix=idx)

@@ -50,7 +50,7 @@ class g_mux(p2v):
         else:
             _enum_name = ""
             for _n in range(num):
-                _input_names.append(f"in{_n}")
+                _input_names.append(f"din{_n}")
 
         if isinstance(bits, p2v_enum):
             bits = bits.BITS
