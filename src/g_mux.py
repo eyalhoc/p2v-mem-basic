@@ -93,8 +93,8 @@ class g_mux(p2v):
         sel_lines = []
         for n in range(num):
             sel_bus = misc.concat(bits * [misc.bit(decoded_sel, n)])
-            sel_lines.append(f"{sel_bus} & {_input_names[n]}")
-        mux_lines = " |\n ".join(sel_lines)
+            sel_lines.append(sel_bus & _input_names[n])
+        mux_lines = misc.concat(sel_lines, sep="|\n")
 
         self.sample(clk, out, mux_lines, valid=valid, bypass=not sample)
         if has_valid:
