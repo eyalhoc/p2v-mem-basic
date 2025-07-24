@@ -127,7 +127,7 @@ class g_mem_single(p2v):
         self.tb.syn_off()
         for name in ["write", "read"]:
             self.line(f"""
-                        task {name};
+                        task automatic {name};
                             input [31:0] addr; // larger to allow error
                             {misc.cond(name == "write", "input", "output")} [{bits-1}:0] data;
                             begin

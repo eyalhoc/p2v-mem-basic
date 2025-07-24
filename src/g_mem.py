@@ -319,7 +319,7 @@ class g_mem(p2v):
         self.tb.syn_off()
         for name in ["write", "read"]:
             self.line(f"""
-                        task {name};
+                        task automatic {name};
                             input [31:0] addr; // larger to allow error
                             {misc.cond(name == "write", "input", "output")} [{bits-1}:0] data;
                             begin
@@ -342,9 +342,9 @@ class g_mem(p2v):
 
         self.line(f"""
                     integer line_idx = 0;
-                    task write_file;
+                    task automatic write_file;
                         input [128*8-1:0] filename;
-                        reg [{bits-1}:0] temp_mem [0:{line_num}-1];
+                        reg [{bits-1}:0] temp_mem [{line_num}];
                         reg [{bits-1}:0] line_data;
                         begin
                             $readmemh(filename, temp_mem);

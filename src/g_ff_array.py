@@ -97,7 +97,7 @@ class g_ff_array(p2v):
     def _top_tasks(self, inst_name, bits, addr_bits):
         self.tb.syn_off()
         self.line(f"""
-                    task write;
+                    task automatic write;
                         input [{addr_bits-1}:0] addr;
                         input [{bits-1}:0] data;
                         begin
@@ -105,7 +105,7 @@ class g_ff_array(p2v):
                         end
                     endtask
 
-                    task read;
+                    task automatic read;
                         input [{addr_bits-1}:0] addr;
                         output [{bits-1}:0] data;
                         begin
@@ -118,7 +118,7 @@ class g_ff_array(p2v):
     def _rw_tasks(self, path, bits, addr_bits):
         self.tb.syn_off()
         self.line(f"""
-                    task write;
+                    task automatic write;
                         input [{addr_bits-1}:0] addr;
                         input [{bits-1}:0] data;
                         begin
@@ -126,7 +126,7 @@ class g_ff_array(p2v):
                         end
                     endtask
 
-                    task read;
+                    task automatic read;
                         input [{addr_bits-1}:0] addr;
                         output [{bits-1}:0] data;
                         logic [{bits-1}:0] data;

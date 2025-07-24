@@ -186,7 +186,7 @@ class g_sram(p2v):
 
         self.tb.syn_off()
         self.line(f"""
-                    task write;
+                    task automatic write;
                         input [{addr_bits+pad_addr_bits-1}:0] addr;
                         input [{bits+pad_bits-1}:0] data;
                         begin
@@ -194,7 +194,7 @@ class g_sram(p2v):
                         end
                     endtask
 
-                    task read;
+                    task automatic read;
                         input [{addr_bits+pad_addr_bits-1}:0] addr;
                         output [{bits+pad_bits-1}:0] data;
                         logic [{bits+pad_bits-1}:0] data;
