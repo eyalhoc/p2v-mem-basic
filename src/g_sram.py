@@ -125,10 +125,11 @@ class g_sram(p2v):
                 if "w" in port and bit_sel > 0:
                     wsel[n] = self.logic(f"wsel{n}", bits // bit_sel)
                     if bit_sel == 1:
-                        self.assign(wsel[n], misc.bits(wr_sel[n], bits))
+                        self.assign(wsel[n], wr_sel[n][:bits])
                     else:
                         for i in range(bits // bit_sel):
-                            self.assign(misc.bit(wsel[n], i), misc.bits(wr_sel[n], bit_sel, bit_sel*i) > 0)
+                            start = bit_sel*i
+                            self.assign(wsel[n][i], wr_sel[n][start:start+bit_sel] > 0)
     
             signals = self._get_verilog_ports(sram_name)
             names = self._get_lib_names(signals)
@@ -140,19 +141,19 @@ class g_sram(p2v):
                 addr[n] = self.logic(f"addr{n}", [addr_bits+pad_addr_bits])
                 self.assign(addr[n], conn[f"addr{n}"])
                 son.connect_in(names[f"clk{n}"], clks[n].name)
-                son.connect_in(names[f"addr{n}"], misc.bits(addr[n], addr_bits))
+                son.connect_in(names[f"addr{n}"], addr[n][:addr_bits])
                 if self._check_port(sram_name, f"csb{n}"):
                     son.connect_in(names[f"csb{n}"], conn[f"csb{n}"])
                 if self._check_port(sram_name, f"web{n}"):
                     son.connect_in(names[f"web{n}"], conn[f"web{n}"])
                 if self._check_port(sram_name, f"din{n}"):
-                    son.connect_in(names[f"din{n}"], misc.bits(conn[f"din{n}"], bits))
+                    son.connect_in(names[f"din{n}"], conn[f"din{n}"][:bits])
                 if self._check_port(sram_name, f"wsel{n}"):
                     son.connect_in(names[f"wsel{n}"], conn[f"wsel{n}"])
                 if self._check_port(sram_name, f"dout{n}"):
-                    son.connect_out(names[f"dout{n}"], misc.bits(rd_data[n], bits))
+                    son.connect_out(names[f"dout{n}"], rd_data[n][:bits])
                     if pad_bits > 0:
-                        self.assign(misc.bits(rd_data[n], pad_bits, start=bits), misc.dec(0, pad_bits))
+                        self.assign(rd_data[n][bits:], 0)
 
             # connect unused signals
             for name, signal in signals.items():
@@ -199,7 +200,7 @@ class g_sram(p2v):
                         output [{bits+pad_bits-1}:0] data;
                         logic [{bits+pad_bits-1}:0] data;
                         begin
-                            data = {misc.pad(pad_bits, f"{path}[{misc.bits('addr', addr_bits)}]")};
+                            data = {misc.pad(pad_bits, f"{path}[{misc.bits('addr', addr_bits)}]", _allow_str=True)};
                         end
                     endtask
                     """)

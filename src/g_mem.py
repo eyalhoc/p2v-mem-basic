@@ -193,9 +193,9 @@ class g_mem(p2v):
                     wr_strb += [self.input(f"wr{idx}_strb", [strb_bits])]
                     wr_sel  += [self.logic(f"wr{idx}_sel", [bits])]
                     for i in range(strb_bits):
-                        self.assign(misc.bits(wr_sel[idx], bit_sel, bit_sel*i), misc.concat(bit_sel * [misc.bit(wr_strb[idx], i)]))
+                        self.assign(misc.bits(wr_sel[idx], bit_sel, start=bit_sel*i), misc.concat(bit_sel * [wr_strb[idx][i]]))
                     if (bits % bit_sel) > 0:
-                        self.assign(misc.bits(wr_sel[idx], bits % bit_sel, start=strb_bits*bit_sel), misc.concat((bits % bit_sel)*[misc.bit(wr_strb[idx], strb_bits-1)]))
+                        self.assign(misc.bits(wr_sel[idx], bits % bit_sel, start=strb_bits*bit_sel), misc.concat((bits % bit_sel)*[wr_strb[idx][strb_bits-1]]))
             else:
                 wr         += [self.logic(f"wr{idx}", assign=0)]
                 wr_addr    += [self.logic(f"wr{idx}_addr", [addr_bits], assign=0)]
@@ -222,7 +222,7 @@ class g_mem(p2v):
         rd_data_pad = [None] * port_num
         for idx in range(port_num):
             rd_data_pad[idx] = self.logic(f"rd{idx}_data_pad", [bits_roundup])
-            self.assign(rd_data[idx], misc.bits(rd_data_pad[idx], bits))
+            self.assign(rd_data[idx], rd_data_pad[idx][:bits])
             if bits_roundup > bits:
                 self.allow_unused(misc.bits(rd_data_pad[idx], bits_roundup-bits, start=bits))
 
@@ -232,19 +232,19 @@ class g_mem(p2v):
         wr_row = {}
         rd_row_data = {}
         for idx in range(port_num):
-            wr_row_sel[idx] =  self.logic(f"wr{idx}_row_sel", [row_num])
-            rd_row_sel[idx] =  self.logic(f"rd{idx}_row_sel", [row_num])
+            wr_row_sel[idx] = self.logic(f"wr{idx}_row_sel", [row_num])
+            rd_row_sel[idx] = self.logic(f"rd{idx}_row_sel", [row_num])
             wr_row[idx] = [None] * row_num
             rd_row_data[idx] = [None] * row_num
             for y in range(row_num):
-                wr_row[idx][y] = self.logic(f"wr{idx}_y{y}", assign=wr[idx] & misc.bit(wr_row_sel[idx], y))
+                wr_row[idx][y] = self.logic(f"wr{idx}_y{y}", assign=wr[idx] & wr_row_sel[idx][y])
                 rd_row_data[idx][y] = self.logic(f"rd{idx}_data{y}", [bits_roundup])
                 if row_num == 1:
-                    self.assign(misc.bit(wr_row_sel[idx], y), 1)
-                    self.assign(misc.bit(rd_row_sel[idx], y), 1)
+                    self.assign(wr_row_sel[idx][y], 1)
+                    self.assign(rd_row_sel[idx][y], 1)
                 else:
-                    self.assign(misc.bit(wr_row_sel[idx], y), misc.bits(wr_addr[idx], row_sel_bits, start=sram_addr_bits) == misc.dec(y, row_sel_bits))
-                    self.assign(misc.bit(rd_row_sel[idx], y), misc.bits(rd_addr[idx], row_sel_bits, start=sram_addr_bits) == misc.dec(y, row_sel_bits))
+                    self.assign(wr_row_sel[idx][y], wr_addr[idx][sram_addr_bits:sram_addr_bits+row_sel_bits] == y)
+                    self.assign(rd_row_sel[idx][y], rd_addr[idx][sram_addr_bits:sram_addr_bits+row_sel_bits] == y)
 
         # INSTANCES OUTPUT
         rd_select = [None] * port_num
@@ -255,7 +255,7 @@ class g_mem(p2v):
             rd_sel_pre[idx] = self.logic(f"rd{idx}_sel_pre", [row_num])
             rd_valid_pre[idx] = self.logic(f"rd{idx}_valid_pre")
             for y in range(row_num):
-                self.assign(misc.bit(rd_sel_pre[idx], y), misc.bit(rd_row_sel[idx], y))
+                self.assign(rd_sel_pre[idx][y], rd_row_sel[idx][y])
 
             self.sample(clks[idx], rd_select[idx], rd_sel_pre[idx], valid=rd[idx])
             self.sample(clks[idx], rd_valid_pre[idx], rd[idx])
@@ -285,16 +285,16 @@ class g_mem(p2v):
             for idx in range(port_num):
                 son.connect_in(wr[idx], wr_row[idx][y])
                 if addr_bits > sram_addr_bits:
-                    son.connect_in(wr_addr[idx], misc.bits(wr_addr[idx], sram_addr_bits))
+                    son.connect_in(wr_addr[idx], wr_addr[idx][:sram_addr_bits])
                 else:
-                    son.connect_in(wr_addr[idx], misc.pad(sram_addr_bits-addr_bits, misc.bits(wr_addr[idx], addr_bits)))
+                    son.connect_in(wr_addr[idx], misc.pad(sram_addr_bits-addr_bits, wr_addr[idx][:addr_bits]))
                 son.connect_in(wr_data[idx], misc.pad(bits_roundup-bits, wr_data[idx]))
                 son.connect_in(wr_sel[idx], misc.pad(bits_roundup-bits, wr_sel[idx]))
-                son.connect_in(rd[idx], rd[idx] & misc.bit(rd_row_sel[idx], y))
+                son.connect_in(rd[idx], rd[idx] & rd_row_sel[idx][y])
                 if addr_bits > sram_addr_bits:
-                    son.connect_in(rd_addr[idx], misc.bits(rd_addr[idx], sram_addr_bits))
+                    son.connect_in(rd_addr[idx], rd_addr[idx][:sram_addr_bits])
                 else:
-                    son.connect_in(rd_addr[idx], misc.pad(sram_addr_bits-addr_bits, misc.bits(rd_addr[idx], addr_bits)))
+                    son.connect_in(rd_addr[idx], misc.pad(sram_addr_bits-addr_bits, rd_addr[idx][:addr_bits]))
                 son.connect_out(rd_data[idx], rd_row_data[idx][y])
                 son.connect_out(rd_valid[idx], None)
             son.inst(f"g_mem_row{y}")

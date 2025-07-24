@@ -101,7 +101,8 @@ class g_mux(p2v):
             self.sample(clk, valid_out, valid, bypass=not sample)
 
         if not encode:
-            self.assert_always(sel, misc.is_hotone(sel, sel_bits, allow_zero=True), "mux decoded selector must be hotone")
+            hotone = self.logic(assign=misc.is_hotone(sel, sel_bits, allow_zero=True))
+            self.assert_always(sel, hotone, "mux decoded selector must be hotone", fatal=False)
 
         return self.write()
 
