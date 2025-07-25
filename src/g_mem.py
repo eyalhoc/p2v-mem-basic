@@ -193,9 +193,12 @@ class g_mem(p2v):
                     wr_strb += [self.input(f"wr{idx}_strb", [strb_bits])]
                     wr_sel  += [self.logic(f"wr{idx}_sel", [bits])]
                     for i in range(strb_bits):
-                        self.assign(misc.bits(wr_sel[idx], bit_sel, start=bit_sel*i), misc.concat(bit_sel * [wr_strb[idx][i]]))
-                    if (bits % bit_sel) > 0:
-                        self.assign(misc.bits(wr_sel[idx], bits % bit_sel, start=strb_bits*bit_sel), misc.concat((bits % bit_sel)*[wr_strb[idx][strb_bits-1]]))
+                        start = bit_sel * i
+                        self.assign(wr_sel[idx][start:start+bit_sel], wr_strb[idx][i] * bit_sel)
+                    bit_sel_remain = bits % bit_sel
+                    if bit_sel_remain > 0:
+                        start = strb_bits * bit_sel
+                        self.assign(wr_sel[idx][start:+start+bit_sel_remain], wr_strb[idx][strb_bits-1] * bit_sel_remain)
             else:
                 wr         += [self.logic(f"wr{idx}", assign=0)]
                 wr_addr    += [self.logic(f"wr{idx}_addr", [addr_bits], assign=0)]
@@ -224,7 +227,7 @@ class g_mem(p2v):
             rd_data_pad[idx] = self.logic(f"rd{idx}_data_pad", [bits_roundup])
             self.assign(rd_data[idx], rd_data_pad[idx][:bits])
             if bits_roundup > bits:
-                self.allow_unused(misc.bits(rd_data_pad[idx], bits_roundup-bits, start=bits))
+                self.allow_unused(rd_data_pad[idx][bits:])
 
 
         wr_row_sel = [None] * port_num
@@ -328,8 +331,8 @@ class g_mem(p2v):
             if row_num == 1:
                 row_idx = None
             else:
-                row_idx = misc.bits("addr", row_sel_bits, start=row_addr_bits)
-            row_addr = misc.pad(32-row_addr_bits, misc.bits("addr", row_addr_bits))
+                row_idx = misc._declare("addr", row_sel_bits, start=row_addr_bits)
+            row_addr = misc.pad(32-row_addr_bits, misc._declare("addr", row_addr_bits))
             for y in range(row_num):
                 if row_idx is not None:
                     self.line(f"if ({row_idx} == {misc.dec(y, row_sel_bits)})")

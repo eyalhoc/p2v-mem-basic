@@ -86,13 +86,13 @@ class g_mux(p2v):
         decoded_sel = self.logic([num])
         if encode:
             for n in range(num):
-                self.assign(misc.bit(decoded_sel, n), sel == misc.dec(n, sel_bits))
+                self.assign(decoded_sel[n], sel == n)
         else:
             self.assign(decoded_sel, sel)
 
         sel_lines = []
         for n in range(num):
-            sel_bus = misc.concat(bits * [misc.bit(decoded_sel, n)])
+            sel_bus = misc.concat(bits * [decoded_sel[n]])
             sel_lines.append(sel_bus & _input_names[n])
         mux_lines = misc.concat(sel_lines, sep="|\n")
 

@@ -178,7 +178,7 @@ class g_mem_row(p2v):
                             begin
                         """)
             for x in range(bank_num):
-                self.line(f"g_mem_bank{x}.{name}(addr, {misc.bits('data', bits_per_bank, start=bits_per_bank*x)});")
+                self.line(f"g_mem_bank{x}.{name}(addr, {misc._declare('data', bits_per_bank, start=bits_per_bank*x)});")
             self.line("""
                             end
                         endtask

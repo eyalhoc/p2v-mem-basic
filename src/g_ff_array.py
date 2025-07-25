@@ -79,14 +79,14 @@ class g_ff_array(p2v):
             self._top_tasks(inst_name=inst_name, bits=bits, addr_bits=addr_bits)
 
         else:
-            self.logic(path, (depth, bits)) # multi-dimentional array
+            path = self.logic(path, (depth, bits)) # multi-dimentional array
 
-            self.sample(wr_clk, misc.bit(path, wr_addr), (wr_sel & wr_data) | (~wr_sel & misc.bit(path, wr_addr)), valid=wr)
+            self.sample(wr_clk, path[wr_addr], (wr_sel & wr_data) | (~wr_sel & path[wr_addr]), valid=wr)
 
             if sample:
-                self.sample(rd_clk, rd_data, misc.bit(path, rd_addr), valid=rd)
+                self.sample(rd_clk, rd_data, path[rd_addr], valid=rd)
             else:
-                self.assign(rd_data, misc.bit(path, rd_addr))
+                self.assign(rd_data, path[rd_addr])
                 self.allow_unused([rd_clk, rd])
 
             self._rw_tasks(path=path, bits=bits, addr_bits=addr_bits)

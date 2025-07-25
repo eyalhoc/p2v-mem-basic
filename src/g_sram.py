@@ -191,7 +191,7 @@ class g_sram(p2v):
                         input [{addr_bits+pad_addr_bits-1}:0] addr;
                         input [{bits+pad_bits-1}:0] data;
                         begin
-                            {path}[{misc.bits("addr", addr_bits)}] = {misc.bits("data", bits)};
+                            {path}[{misc._declare("addr", addr_bits)}] = {misc._declare("data", bits)};
                         end
                     endtask
 
@@ -200,7 +200,7 @@ class g_sram(p2v):
                         output [{bits+pad_bits-1}:0] data;
                         logic [{bits+pad_bits-1}:0] data;
                         begin
-                            data = {misc.pad(pad_bits, f"{path}[{misc.bits('addr', addr_bits)}]", _allow_str=True)};
+                            data = {path}[{misc._declare('addr', addr_bits)}];
                         end
                     endtask
                     """)

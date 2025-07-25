@@ -132,7 +132,7 @@ class g_mem_single(p2v):
                             {misc.cond(name == "write", "input", "output")} [{bits-1}:0] data;
                             begin
                                 {self.check_never(f"addr >= {line_num}", f"{name} address 0x%0h is out of memory size 0x%0h", params=["addr", line_num])}
-                                sram.{name}({misc.bits('addr', addr_bits)}, data);
+                                sram.{name}({misc._declare('addr', addr_bits)}, data);
                             end
                         endtask
                     """)
