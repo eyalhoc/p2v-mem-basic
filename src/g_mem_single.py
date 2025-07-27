@@ -75,23 +75,23 @@ class g_mem_single(p2v):
         if clk1 != clk0:
             self.input(clk1)
 
-        wr       = []
-        wr_addr  = []
-        wr_data  = []
-        wr_sel   = []
-        rd       = []
-        rd_addr  = []
-        rd_data  = []
-        rd_valid = []
+        wr       = {}
+        wr_addr  = {}
+        wr_data  = {}
+        wr_sel   = {}
+        rd       = {}
+        rd_addr  = {}
+        rd_data  = {}
+        rd_valid = {}
         for idx in range(port_num):
-            wr       += [self.input(f"wr{idx}")]
-            wr_addr  += [self.input(f"wr{idx}_addr", [addr_bits])]
-            wr_data  += [self.input(f"wr{idx}_data", [bits])]
-            wr_sel   += [self.input(f"wr{idx}_sel", [bits])]
-            rd       += [self.input(f"rd{idx}")]
-            rd_addr  += [self.input(f"rd{idx}_addr", [addr_bits])]
-            rd_data  += [self.output(f"rd{idx}_data", [bits])]
-            rd_valid += [self.output(f"rd{idx}_valid")]
+            wr       [idx] = self.input()
+            wr_addr  [idx] = self.input([addr_bits])
+            wr_data  [idx] = self.input([bits])
+            wr_sel   [idx] = self.input([bits])
+            rd       [idx] = self.input()
+            rd_addr  [idx] = self.input([addr_bits])
+            rd_data  [idx] = self.output([bits])
+            rd_valid [idx] = self.output()
 
         bank_num = row_num = 1
         multi_bits = bits

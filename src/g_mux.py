@@ -38,22 +38,20 @@ class g_mux(p2v):
         Main function
         """
 
-        _input_names = []
+        _enum_name = ""
+        _enum_names = []
         if isinstance(num, p2v_enum):
-            _enum_name = num.NAME
             for _name in vars(num):
-                if not _name.startswith("__") and _name not in ["NAME", "BITS"]:
-                    _input_names.append(_name)
-            if not misc.is_pow2(len(_input_names)):
-                _input_names.append("DEFAULT")
-            num = len(_input_names)
-        else:
-            _enum_name = ""
-            for _n in range(num):
-                _input_names.append(f"din{_n}")
-
-        if isinstance(bits, p2v_enum):
-            bits = bits.BITS
+                if _name == "NAME":
+                    _enum_name = str(num.NAME)
+                elif _name == "BITS":
+                    if isinstance(bits, p2v_enum):
+                        bits = bits.BITS
+                else:
+                    _enum_names.append(_name)
+            if not misc.is_pow2(len(_enum_names)):
+                _enum_names.append("DEFAULT")
+            num = len(_enum_names)
 
 
         self.set_param(clk, clock) # optional clock
@@ -78,8 +76,13 @@ class g_mux(p2v):
         else:
             valid = None
 
+        din = {}
         sel = self.input([sel_bits])
-        self.input(_input_names, [bits])
+        for n in range(num):
+            if _enum_name == "":
+                din[n] = self.input([bits])
+            else:
+                din[n] = self.input(_enum_names[n], [bits], _allow_str=True)
         out = self.output([bits])
 
 
@@ -93,7 +96,7 @@ class g_mux(p2v):
         sel_lines = []
         for n in range(num):
             sel_bus = misc.concat(bits * [decoded_sel[n]])
-            sel_lines.append(sel_bus & _input_names[n])
+            sel_lines.append(sel_bus & din[n])
         mux_lines = misc.concat(sel_lines, sep="|\n")
 
         self.sample(clk, out, mux_lines, valid=valid, bypass=not sample)

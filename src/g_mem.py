@@ -166,32 +166,32 @@ class g_mem(p2v):
         if clk1 != clk0:
             self.input(clk1)
 
-        wr       = []
-        wr_addr  = []
-        wr_data  = []
-        wr_sel   = []
+        wr       = {}
+        wr_addr  = {}
+        wr_data  = {}
+        wr_sel   = {}
         if bit_sel > 1:
-            wr_strb = []
-        rd       = []
-        rd_sel   = []
-        rd_addr  = []
-        rd_data  = []
-        rd_valid = []
+            wr_strb = {}
+        rd       = {}
+        rd_sel   = {}
+        rd_addr  = {}
+        rd_data  = {}
+        rd_valid = {}
         for idx in range(port_num):
             port_type = g_sram.g_sram(self).get_port_type(sram_name, idx=idx)
             if "w" in port_type:
-                wr         += [self.input(f"wr{idx}")]
-                wr_addr    += [self.input(f"wr{idx}_addr", [addr_bits])]
-                wr_data    += [self.input(f"wr{idx}_data", [bits])]
+                wr[idx]         = self.input()
+                wr_addr[idx]    = self.input([addr_bits])
+                wr_data[idx]    = self.input([bits])
 
                 if bit_sel == 0:
-                    wr_sel += [self.logic(f"wr{idx}_sel", [bits], assign=-1)]
+                    wr_sel[idx] = self.logic([bits], assign=-1)
                 elif bit_sel == 1:
-                    wr_sel += [self.input(f"wr{idx}_sel", [bits])]
+                    wr_sel[idx] = self.input([bits])
                 else:
                     strb_bits = bits // bit_sel
-                    wr_strb += [self.input(f"wr{idx}_strb", [strb_bits])]
-                    wr_sel  += [self.logic(f"wr{idx}_sel", [bits])]
+                    wr_strb[idx] = self.input([strb_bits])
+                    wr_sel[idx]  = self.logic([bits])
                     for i in range(strb_bits):
                         start = bit_sel * i
                         self.assign(wr_sel[idx][start:start+bit_sel], wr_strb[idx][i] * bit_sel)
@@ -200,48 +200,48 @@ class g_mem(p2v):
                         start = strb_bits * bit_sel
                         self.assign(wr_sel[idx][start:+start+bit_sel_remain], wr_strb[idx][strb_bits-1] * bit_sel_remain)
             else:
-                wr         += [self.logic(f"wr{idx}", assign=0)]
-                wr_addr    += [self.logic(f"wr{idx}_addr", [addr_bits], assign=0)]
-                wr_data    += [self.logic(f"wr{idx}_data", [bits], assign=0)]
-                wr_sel     += [self.logic(f"wr{idx}_sel", [bits], assign=0)]
+                wr[idx]         = self.logic(assign=0)
+                wr_addr[idx]    = self.logic([addr_bits], assign=0)
+                wr_data[idx]    = self.logic([bits], assign=0)
+                wr_sel[idx]     = self.logic([bits], assign=0)
 
             if "r" in port_type:
-                rd         += [self.input(f"rd{idx}")]
+                rd[idx]         = self.input()
                 if rd_en:
-                    rd_sel += [self.input(f"rd{idx}_en", [bank_num])]
-                rd_addr    += [self.input(f"rd{idx}_addr", [addr_bits])]
-                rd_data    += [self.output(f"rd{idx}_data", [bits])]
-                rd_valid   += [self.output(f"rd{idx}_valid")]
+                    rd_sel[idx] = self.input([bank_num])
+                rd_addr[idx]    = self.input([addr_bits])
+                rd_data[idx]    = self.output([bits])
+                rd_valid[idx]   = self.output()
             else:
-                rd         += [self.logic(f"rd{idx}", assign=0)]
+                rd[idx]         = self.logic(assign=0)
                 if rd_en:
-                    rd_sel += [self.logic(f"rd{idx}_en", [bank_num], assign=0)]
-                rd_addr    += [self.logic(f"rd{idx}_addr", [addr_bits], assign=0)]
-                rd_data    += [self.logic(f"rd{idx}_data", [bits])]
-                rd_valid   += [self.logic(f"rd{idx}_valid")]
+                    rd_sel[idx] = self.logic([bank_num], assign=0)
+                rd_addr[idx]    = self.logic([addr_bits], assign=0)
+                rd_data[idx]    = self.logic([bits])
+                rd_valid[idx]   = self.logic()
                 self.allow_unused([rd_data[idx], rd_valid[idx]])
 
 
-        rd_data_pad = [None] * port_num
+        rd_data_pad = {}
         for idx in range(port_num):
-            rd_data_pad[idx] = self.logic(f"rd{idx}_data_pad", [bits_roundup])
+            rd_data_pad[idx] = self.logic([bits_roundup])
             self.assign(rd_data[idx], rd_data_pad[idx][:bits])
             if bits_roundup > bits:
                 self.allow_unused(rd_data_pad[idx][bits:])
 
 
-        wr_row_sel = [None] * port_num
-        rd_row_sel = [None] * port_num
+        wr_row_sel = {}
+        rd_row_sel = {}
         wr_row = {}
         rd_row_data = {}
         for idx in range(port_num):
-            wr_row_sel[idx] = self.logic(f"wr{idx}_row_sel", [row_num])
-            rd_row_sel[idx] = self.logic(f"rd{idx}_row_sel", [row_num])
-            wr_row[idx] = [None] * row_num
-            rd_row_data[idx] = [None] * row_num
+            wr_row_sel[idx] = self.logic([row_num])
+            rd_row_sel[idx] = self.logic([row_num])
+            wr_row[idx] = {}
+            rd_row_data[idx] = {}
             for y in range(row_num):
-                wr_row[idx][y] = self.logic(f"wr{idx}_y{y}", assign=wr[idx] & wr_row_sel[idx][y])
-                rd_row_data[idx][y] = self.logic(f"rd{idx}_data{y}", [bits_roundup])
+                wr_row[idx][y] = self.logic(assign=wr[idx] & wr_row_sel[idx][y])
+                rd_row_data[idx][y] = self.logic([bits_roundup])
                 if row_num == 1:
                     self.assign(wr_row_sel[idx][y], 1)
                     self.assign(rd_row_sel[idx][y], 1)
@@ -250,13 +250,13 @@ class g_mem(p2v):
                     self.assign(rd_row_sel[idx][y], rd_addr[idx][sram_addr_bits:sram_addr_bits+row_sel_bits] == y)
 
         # INSTANCES OUTPUT
-        rd_select = [None] * port_num
-        rd_sel_pre = [None] * port_num
-        rd_valid_pre = [None] * port_num
+        rd_select = {}
+        rd_sel_pre = {}
+        rd_valid_pre = {}
         for idx in range(port_num):
-            rd_select[idx] = self.logic(f"rd{idx}_select", [row_num])
-            rd_sel_pre[idx] = self.logic(f"rd{idx}_sel_pre", [row_num])
-            rd_valid_pre[idx] = self.logic(f"rd{idx}_valid_pre")
+            rd_select[idx] = self.logic([row_num])
+            rd_sel_pre[idx] = self.logic([row_num])
+            rd_valid_pre[idx] = self.logic()
             for y in range(row_num):
                 self.assign(rd_sel_pre[idx][y], rd_row_sel[idx][y])
 

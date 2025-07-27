@@ -79,7 +79,7 @@ class g_ff_array(p2v):
             self._top_tasks(inst_name=inst_name, bits=bits, addr_bits=addr_bits)
 
         else:
-            path = self.logic(path, (depth, bits)) # multi-dimentional array
+            path = self.logic(path, (depth, bits), _allow_str=True) # multi-dimentional array
 
             self.sample(wr_clk, path[wr_addr], (wr_sel & wr_data) | (~wr_sel & path[wr_addr]), valid=wr)
 

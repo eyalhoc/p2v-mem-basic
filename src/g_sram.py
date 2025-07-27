@@ -73,14 +73,14 @@ class g_sram(p2v):
             self.remark(f"sram port {n}: {_sram_params[f'port{n}']}")
         self.line()
 
-        wr       = [None] * MAX_PORTS
-        wr_addr  = [None] * MAX_PORTS
-        wr_data  = [None] * MAX_PORTS
-        wr_sel   = [None] * MAX_PORTS
-        rd       = [None] * MAX_PORTS
-        rd_addr  = [None] * MAX_PORTS
-        rd_data  = [None] * MAX_PORTS
-        rd_valid = [None] * MAX_PORTS
+        wr       = {}
+        wr_addr  = {}
+        wr_data  = {}
+        wr_sel   = {}
+        rd       = {}
+        rd_addr  = {}
+        rd_data  = {}
+        rd_valid = {}
         
         port_idxs = []
         for n in range(MAX_PORTS):
@@ -89,16 +89,16 @@ class g_sram(p2v):
                 port_idxs.append(n)
                 if clks[n] is not None and (n==0 or clks[n] != clks[n-1]):
                     self.input(clks[n])
-                wr[n]      = self.input(f"wr{n}")
-                wr_addr[n] = self.input(f"wr{n}_addr", [addr_bits+pad_addr_bits])
-                wr_data[n] = self.input(f"wr{n}_data", [bits+pad_bits])
-                wr_sel[n]  = self.input(f"wr{n}_sel", [bits+pad_bits])
+                wr[n]      = self.input()
+                wr_addr[n] = self.input([addr_bits+pad_addr_bits])
+                wr_data[n] = self.input([bits+pad_bits])
+                wr_sel[n]  = self.input([bits+pad_bits])
                 if bit_sel == 0:
                     self.allow_unused(wr_sel[n])
-                rd[n]       = self.input(f"rd{n}")
-                rd_addr[n]  = self.input(f"rd{n}_addr", [addr_bits+pad_addr_bits])
-                rd_data[n]  = self.output(f"rd{n}_data", [bits+pad_bits])
-                rd_valid[n] = self.output(f"rd{n}_valid")
+                rd[n]       = self.input()
+                rd_addr[n]  = self.input([addr_bits+pad_addr_bits])
+                rd_data[n]  = self.output([bits+pad_bits])
+                rd_valid[n] = self.output()
                 
 
         if sram_name is None:
@@ -119,26 +119,28 @@ class g_sram(p2v):
 
         else:
             # create write select
-            wsel = [None] * MAX_PORTS
+            wsel = {}
             for n in range(MAX_PORTS):
                 port = _sram_params[f"port{n}"]
                 if "w" in port and bit_sel > 0:
-                    wsel[n] = self.logic(f"wsel{n}", bits // bit_sel)
+                    wsel[n] = self.logic(bits // bit_sel)
                     if bit_sel == 1:
                         self.assign(wsel[n], wr_sel[n][:bits])
                     else:
                         for i in range(bits // bit_sel):
                             start = bit_sel*i
                             self.assign(wsel[n][i], wr_sel[n][start:start+bit_sel] > 0)
+                else:
+                    wsel[n] = None
     
             signals = self._get_verilog_ports(sram_name)
             names = self._get_lib_names(signals)
             conn = self._get_lib_conn(signals, wr, wr_addr, wr_data, wsel, rd, rd_addr, rd_data)
 
-            addr = [None] * MAX_PORTS
+            addr = {}
             son = self.verilog_module(sram_name)
             for n in port_idxs:
-                addr[n] = self.logic(f"addr{n}", [addr_bits+pad_addr_bits])
+                addr[n] = self.logic([addr_bits+pad_addr_bits])
                 self.assign(addr[n], conn[f"addr{n}"])
                 son.connect_in(names[f"clk{n}"], clks[n].name)
                 son.connect_in(names[f"addr{n}"], addr[n][:addr_bits])
@@ -272,7 +274,7 @@ class g_sram(p2v):
         if "din0" in signals and "addr0" in signals:
             conn["mem"] = "mem"
             for n in range(MAX_PORTS):
-                if wr[n] is None:
+                if n not in wr:
                     continue
                 conn[f"clk{n}"]  = None
                 conn[f"csb{n}"]  = ~(wr[n] | rd[n])

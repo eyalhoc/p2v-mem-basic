@@ -85,43 +85,43 @@ class g_mem_row(p2v):
         if clk1 != clk0:
             self.input(clk1)
 
-        wr       = []
-        wr_addr  = []
-        wr_data  = []
-        wr_sel   = []
-        rd       = []
-        rd_sel   = []
-        rd_addr  = []
-        rd_data  = []
-        rd_valid = []
+        wr       = {}
+        wr_addr  = {}
+        wr_data  = {}
+        wr_sel   = {}
+        rd       = {}
+        rd_sel   = {}
+        rd_addr  = {}
+        rd_data  = {}
+        rd_valid = {}
         for idx in range(port_num):
-            wr       += [self.input(f"wr{idx}")]
-            wr_addr  += [self.input(f"wr{idx}_addr", [addr_bits])]
-            wr_data  += [self.input(f"wr{idx}_data", [bits])]
-            wr_sel   += [self.input(f"wr{idx}_sel", [bits])]
-            rd       += [self.input(f"rd{idx}")]
+            wr       [idx] = self.input()
+            wr_addr  [idx] = self.input([addr_bits])
+            wr_data  [idx] = self.input([bits])
+            wr_sel   [idx] = self.input([bits])
+            rd       [idx] = self.input()
             if rd_en:
-                rd_sel += [self.input(f"rd{idx}_en", [bank_num])]
+                rd_sel [idx] = self.input([bank_num])
             else:
-                rd_sel += [self.logic(f"rd{idx}_en", [bank_num], assign=-1)]
-            rd_addr  += [self.input(f"rd{idx}_addr", [addr_bits])]
-            rd_data  += [self.output(f"rd{idx}_data", [bits])]
-            rd_valid += [self.output(f"rd{idx}_valid")]
+                rd_sel [idx] = self.logic([bank_num], assign=-1)
+            rd_addr  [idx] = self.input([addr_bits])
+            rd_data  [idx] = self.output([bits])
+            rd_valid [idx] = self.output()
 
 
-        bank_wr_sel = [None] * port_num
-        bank_rd_sel = [None] * port_num
+        bank_wr_sel = {}
+        bank_rd_sel = {}
         wr_bank = {}
         wr_bank_sel = {}
         for idx in range(port_num):
-            bank_wr_sel[idx] = self.logic(f"wr{idx}_bank_sel", [bank_num])
-            bank_rd_sel[idx] = self.logic(f"rd{idx}_bank_sel", [bank_num])
-            wr_bank[idx] = [None] * bank_num
-            wr_bank_sel[idx] = [None] * bank_num
+            bank_wr_sel[idx] = self.logic([bank_num])
+            bank_rd_sel[idx] = self.logic([bank_num])
+            wr_bank[idx] = {}
+            wr_bank_sel[idx] = {}
             for x in range(bank_num):
                 start = bits_per_bank * x
-                wr_bank[idx][x] = self.logic(f"wr{idx}_bank{x}", assign=wr[idx] & bank_wr_sel[idx][x])
-                wr_bank_sel[idx][x] = self.logic(f"wr{idx}_sel{x}", [bits_per_bank], assign=wr_sel[idx][start:start+bits_per_bank])
+                wr_bank[idx][x] = self.logic(assign=wr[idx] & bank_wr_sel[idx][x])
+                wr_bank_sel[idx][x] = self.logic([bits_per_bank], assign=wr_sel[idx][start:start+bits_per_bank])
 
                 self.assign(bank_wr_sel[idx][x], wr_bank_sel[idx][x]> 0)
                 self.assign(bank_rd_sel[idx][x], rd_sel[idx][x])
@@ -139,14 +139,14 @@ class g_mem_row(p2v):
                 son.connect_in(clk1)
             for idx in range(port_num):
                 start = bits_per_bank * x
-                son.connect_in(wr[idx], wr_bank[idx][x])
-                son.connect_in(wr_addr[idx], wr_addr[idx][:addr_bits])
-                son.connect_in(wr_data[idx], wr_data[idx][start:start+bits_per_bank])
-                son.connect_in(wr_sel[idx], wr_bank_sel[idx][x])
-                son.connect_in(rd[idx], rd[idx] & bank_rd_sel[idx][x])
-                son.connect_in(rd_addr[idx], rd_addr[idx][:addr_bits])
-                son.connect_out(rd_data[idx], rd_data[idx][start:start+bits_per_bank])
-                son.connect_out(rd_valid[idx], None)
+                son.connect_in(son.wr[idx], wr_bank[idx][x])
+                son.connect_in(son.wr_addr[idx], wr_addr[idx][:addr_bits])
+                son.connect_in(son.wr_data[idx], wr_data[idx][start:start+bits_per_bank])
+                son.connect_in(son.wr_sel[idx], wr_bank_sel[idx][x])
+                son.connect_in(son.rd[idx], rd[idx] & bank_rd_sel[idx][x])
+                son.connect_in(son.rd_addr[idx], rd_addr[idx][:addr_bits])
+                son.connect_out(son.rd_data[idx], rd_data[idx][start:start+bits_per_bank])
+                son.connect_out(son.rd_valid[idx], None)
             son.inst(f"g_mem_bank{x}")
 
 
