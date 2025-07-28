@@ -22,7 +22,7 @@
 g_mux module
 """
 
-from p2v import p2v, misc, clock, default_clk, p2v_enum
+from p2v import p2v, misc, clock, default_clk
 
 class g_mux(p2v):
     """
@@ -38,24 +38,8 @@ class g_mux(p2v):
         Main function
         """
 
-        _enum_name = ""
-        _enum_names = []
-        if isinstance(num, p2v_enum):
-            for _name in vars(num):
-                if _name == "NAME":
-                    _enum_name = str(num.NAME)
-                elif _name == "BITS":
-                    if isinstance(bits, p2v_enum):
-                        bits = bits.BITS
-                else:
-                    _enum_names.append(_name)
-            if not misc.is_pow2(len(_enum_names)):
-                _enum_names.append("DEFAULT")
-            num = len(_enum_names)
-
-
         self.set_param(clk, clock) # optional clock
-        self.set_param(num, int, num > 0, suffix=_enum_name) # number of inputs or enumerated type
+        self.set_param(num, int, num > 0) # number of inputs
         self.set_param(bits, int, bits > 0) # data width
         self.set_param(encode, bool, default=True) # encoded selector or hot-one decoded selector
         self.set_param(sample, bool, default=False) # sample output
@@ -79,10 +63,7 @@ class g_mux(p2v):
         din = {}
         sel = self.input([sel_bits])
         for n in range(num):
-            if _enum_name == "":
-                din[n] = self.input([bits])
-            else:
-                din[n] = self.input(_enum_names[n], [bits], _allow_str=True)
+            din[n] = self.input([bits])
         out = self.output([bits])
 
 
@@ -104,8 +85,7 @@ class g_mux(p2v):
             self.sample(clk, valid_out, valid, bypass=not sample)
 
         if not encode:
-            hotone = self.logic(assign=misc.is_hotone(sel, sel_bits, allow_zero=True))
-            self.assert_always(sel, hotone, "mux decoded selector must be hotone", fatal=False)
+            self.assert_final(f"$onehot0({sel})", "mux decoded selector must be zero or hotone")
 
         return self.write()
 

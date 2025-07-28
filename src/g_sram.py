@@ -176,13 +176,13 @@ class g_sram(p2v):
                 self.allow_unused(wr_addr[n])
                 self.allow_unused(wr_data[n])
                 self.allow_unused(wr_sel[n])
-                self.assert_never(clks[n], wr[n], f"write detected on read only port {n}")
+                self.assert_property(clks[n], ~wr[n], f"write detected on read only port {n}")
             if "r" in port:
                 self.sample(clks[n], rd_valid[n], rd[n])
             else:
                 self.allow_unused(rd[n])
                 self.allow_unused(rd_addr[n])
-                self.assert_never(clks[n], rd[n], f"read detected on write only port {n}")
+                self.assert_property(clks[n], ~rd[n], f"read detected on write only port {n}")
                 self.assign(rd_data[n], 0)
                 self.assign(rd_valid[n], 0)
 

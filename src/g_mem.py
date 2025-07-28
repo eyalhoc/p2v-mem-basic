@@ -305,13 +305,18 @@ class g_mem(p2v):
 
         # ASSERTIONS
         for idx in range(port_num):
-            self.assert_never(clks[idx], wr[idx] & (wr_row_sel[idx] == 0), \
-                              f"port {idx} write to address 0x%0h detected without any row selected", params=wr_addr[idx], name=f"wr{idx}_no_row_sel")
-            self.assert_never(clks[idx], rd[idx] & (rd_row_sel[idx] == 0), \
-                              f"port {idx} read to address 0x%0h detected without any row selected", params=rd_addr[idx], name=f"rd{idx}_no_row_sel")
+            self.assert_property(clks[idx], ~(wr[idx] & (wr_row_sel[idx] == 0)), \
+                              misc.format_str(f"port {idx} write to address 0x%0h detected without any row selected", wr_addr[idx]), name=f"wr{idx}_no_row_sel")
+            self.assert_property(clks[idx], ~(rd[idx] & (rd_row_sel[idx] == 0)), \
+                              misc.format_str(f"port {idx} read to address 0x%0h detected without any row selected", rd_addr[idx]), name=f"rd{idx}_no_row_sel")
 
         # READ AND WRITE TASKS
         self._tasks(bits=bits_roundup, line_num=line_num_roundup, row_num=row_num, row_sel_bits=row_sel_bits, row_addr_bits=row_addr_bits)
+        
+        for idx in range(port_num):
+            self.assert_property(clks[idx], misc.pad(1, wr_addr[idx]) < misc.dec(line_num, bits=addr_bits+1), misc.format_str(f"port{idx} write address 0x%0h is out of memory size 0x%0h", [wr_addr[idx], line_num]))
+            self.assert_property(clks[idx], misc.pad(1, rd_addr[idx]) < misc.dec(line_num, bits=addr_bits+1), misc.format_str(f"port {idx} read address 0x%0h is out of memory size 0x%0h", [rd_addr[idx], line_num]))
+
 
         return self.write()
 
@@ -326,7 +331,6 @@ class g_mem(p2v):
                             input [31:0] addr; // larger to allow error
                             {misc.cond(name == "write", "input", "output")} [{bits-1}:0] data;
                             begin
-                                {self.check_never(f"addr >= {line_num}", f"{name} address %0d exceeds line number {line_num}", params="addr", fatal=True)}
                         """)
             if row_num == 1:
                 row_idx = None

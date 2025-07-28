@@ -118,12 +118,17 @@ class g_mem_single(p2v):
 
 
         # READ AND WRITE TASKS
-        self._tasks(bits=bits, line_num=line_num, addr_bits=addr_bits)
+        self._tasks(bits=bits, addr_bits=addr_bits)
+        
+        clks = [clk0, clk1]
+        for idx in range(port_num):
+            self.assert_property(clks[idx], misc.pad(1, wr_addr[idx]) < misc.dec(line_num, bits=addr_bits+1), misc.format_str(f"port{idx} write address 0x%0h is out of memory size 0x%0h", [wr_addr[idx], line_num]))
+            self.assert_property(clks[idx], misc.pad(1, rd_addr[idx]) < misc.dec(line_num, bits=addr_bits+1), misc.format_str(f"port {idx} read address 0x%0h is out of memory size 0x%0h", [rd_addr[idx], line_num]))
 
         return self.write()
 
 
-    def _tasks(self, bits, line_num, addr_bits):
+    def _tasks(self, bits, addr_bits):
         self.tb.syn_off()
         for name in ["write", "read"]:
             self.line(f"""
@@ -131,7 +136,6 @@ class g_mem_single(p2v):
                             input [31:0] addr; // larger to allow error
                             {misc.cond(name == "write", "input", "output")} [{bits-1}:0] data;
                             begin
-                                {self.check_never(f"addr >= {line_num}", f"{name} address 0x%0h is out of memory size 0x%0h", params=["addr", line_num])}
                                 sram.{name}({misc._declare('addr', addr_bits)}, data);
                             end
                         endtask

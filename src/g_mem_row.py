@@ -154,10 +154,10 @@ class g_mem_row(p2v):
             self.sample(clks[idx], rd_valid[idx], rd[idx])
 
             # ASSERTIONS
-            self.assert_never(clks[idx], wr[idx] & (bank_wr_sel[idx] == 0), \
-                              f"port {idx} write to address 0x%0h detected without any bank selected", params=wr_addr[idx])
-            self.assert_never(clks[idx], rd[idx] & (bank_rd_sel[idx] == 0), \
-                              f"port {idx} read to address 0x%0h detected without any bank selected", params=rd_addr[idx])
+            self.assert_property(clks[idx], ~(wr[idx] & (bank_wr_sel[idx] == 0)), \
+                              misc.format_str(f"port {idx} write to address 0x%0h detected without any bank selected", wr_addr[idx]))
+            self.assert_property(clks[idx], ~(rd[idx] & (bank_rd_sel[idx] == 0)), \
+                              misc.format_str(f"port {idx} read to address 0x%0h detected without any bank selected", rd_addr[idx]))
 
 
         # READ AND WRITE TASKS
