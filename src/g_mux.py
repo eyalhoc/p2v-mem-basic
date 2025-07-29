@@ -84,8 +84,8 @@ class g_mux(p2v):
         if has_valid:
             self.sample(clk, valid_out, valid, bypass=not sample)
 
-        if not encode:
-            self.assert_final(misc.onehot0(sel), "mux decoded selector must be zero or hotone")
+        if not encode and sample:
+            self.assume_property(clk, misc.onehot0(sel), "mux decoded selector must be zero or hotone")
 
         return self.write()
 
